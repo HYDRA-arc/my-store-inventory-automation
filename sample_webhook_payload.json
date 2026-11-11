@@ -1,0 +1,16 @@
+{
+  "external_request_id": "website-order-10001",
+  "warehouse_code": "MAIN",
+  "requested_by": "website",
+  "notes": "Check stock before confirming customer order",
+  "items": [
+    {
+      "sku": "LAP-DELL-001",
+      "requested_quantity": 2
+    },
+    {
+      "sku": "LAP-HP-001",
+      "requested_quantity": 6
+    }
+  ]
+}

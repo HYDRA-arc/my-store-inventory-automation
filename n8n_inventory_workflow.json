@@ -1,0 +1,131 @@
+{
+  "name": "MY store - Inventory Stock Check and Reservation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mystore-inventory-check",
+        "responseMode": "usingRespondToWebhook",
+        "options": {}
+      },
+      "id": "b7e22b75-7db5-4f9c-9c31-9b6d37a22e11",
+      "name": "Inventory Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "6a5fb123-9e87-42a1-8a27-0e8a4f6b2a91"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nif (!body.external_request_id || typeof body.external_request_id !== 'string') {\n  throw new Error('external_request_id (string) is required');\n}\nif (!body.warehouse_code || typeof body.warehouse_code !== 'string') {\n  throw new Error('warehouse_code (string) is required');\n}\nif (!Array.isArray(body.items) || body.items.length === 0) {\n  throw new Error('items must be a non-empty array');\n}\nconst items = body.items.map((item, index) => {\n  if (!item.sku || typeof item.sku !== 'string') throw new Error(`items[${index}].sku is required`);\n  const qty = Number(item.requested_quantity);\n  if (!Number.isInteger(qty) || qty <= 0) throw new Error(`items[${index}].requested_quantity must be a positive integer`);\n  return { sku: item.sku.trim(), requested_quantity: qty };\n});\nreturn [{ json: {\n  external_request_id: body.external_request_id.trim(),\n  warehouse_code: body.warehouse_code.trim(),\n  requested_by: body.requested_by ?? 'website',\n  notes: body.notes ?? null,\n  items\n} }];"
+      },
+      "id": "d5a1b3c4-2e1f-4a6b-8c9d-0e1f2a3b4c5d",
+      "name": "Validate Product Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_PROJECT_REF.supabase.co/rest/v1/rpc/process_inventory_request",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_payload: $json } }}",
+        "options": {}
+      },
+      "id": "a3b4c5d6-e7f8-4901-a234-56789abcdef0",
+      "name": "Check and Reserve Stock in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c4d5e6f7-8901-4a23-b456-789abcdef012",
+      "name": "Return Inventory Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Inventory Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Product Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Product Request": {
+      "main": [
+        [
+          {
+            "node": "Check and Reserve Stock in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check and Reserve Stock in Supabase": {
+      "main": [
+        [
+          {
+            "node": "Return Inventory Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f1e2d3c4-b5a6-4789-9012-3456789abcde",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
